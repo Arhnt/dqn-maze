@@ -1,0 +1,30 @@
+package com.zamaruev.ds.dqn.maze.objects;
+
+import com.zamaruev.ds.dqn.maze.strategy.ActionStrategy;
+import lombok.Data;
+
+@Data
+public class Agent extends AbstractTile {
+
+    private ActionStrategy actionStrategy;
+
+    public Agent(int x, int y) {
+        super(x, y);
+    }
+
+    public Agent(int x, int y, ActionStrategy strategy) {
+        super(x, y);
+        this.actionStrategy = strategy;
+    }
+
+    @Override
+    public String toString() {
+        return "A";
+    }
+
+    @Override
+    public Agent clone() {
+        return new Agent(getX(), getY(), actionStrategy);
+    }
+
+}
