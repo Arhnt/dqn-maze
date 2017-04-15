@@ -1,5 +1,6 @@
 package com.zamaruev.ds.dqn.maze.strategy;
 
+import com.zamaruev.ds.commons.CircularObservations;
 import com.zamaruev.ds.dqn.maze.action.Action;
 import com.zamaruev.ds.dqn.maze.action.ActionMaker;
 import com.zamaruev.ds.dqn.maze.dl4j.Dl4jModel;
@@ -11,10 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.queue.CircularFifoQueue;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import static com.zamaruev.ds.dqn.maze.utils.ArrayUtils.maxIndex;
 import static com.zamaruev.ds.dqn.maze.utils.ArrayUtils.maxValue;
@@ -32,10 +30,12 @@ public class Dl4jActionStrategy implements ActionStrategy {
     private final RandomActionStrategy randomStrategy = new RandomActionStrategy();
 
     private final Dl4jModel dl4j = new Dl4jModel();
-    private final CircularFifoQueue<Step> steps = new CircularFifoQueue<>(BATCH * 5000);
+    private final CircularObservations<Step> steps = new CircularObservations<>(BATCH * 5000);
+    private final CircularObservations<Step> finishSteps = new CircularObservations<>(BATCH * 1000);
+
     private MultiLayerNetwork model = dl4j.buildModel();
-    private double randomThreshold = 1d;
-    private double minRandThreshold = 0.05d;
+    private double randomThreshold = 2.0d;
+    private double minRandThreshold = 0.1d;
 
     private Double loss;
 
@@ -71,22 +71,17 @@ public class Dl4jActionStrategy implements ActionStrategy {
         Maze initialState = maze.clone();
         Maze finalState = maze.clone();
 
-        actionMaker.makeAction(finalState, action);
+        float reward = -0.5f;
+        if (actionMaker.makeAction(finalState, action)) {
+            reward = finalState.isSolved() ? 1 : -0.1f;
+        };
 
-        float reward = finalState.isSolved() ? 1 : -0.01f;
-
-        steps.add(new Step(initialState, action, reward, finalState));
-    }
-
-    /**
-     * Take random sample from steps.
-     */
-    private List<Step> takeSample(int i) {
-        Set<Integer> indexes = new HashSet<>();
-        while (indexes.size() < i) {
-            indexes.add(random.nextInt(steps.size()));
+        if(finalState.isSolved()) {
+            finishSteps.add(new Step(initialState, action, reward, finalState));
+        } else {
+            steps.add(new Step(initialState, action, reward, finalState));
         }
-        return indexes.stream().map(steps::get).collect(toList());
+
     }
 
     /**
@@ -96,11 +91,12 @@ public class Dl4jActionStrategy implements ActionStrategy {
         float learningRate = 0.8f;
         float discount = 0.95f;
 
-        if (steps.size() < BATCH * 500) {
+        if (finishSteps.size() < BATCH * 50) {
             return;
         }
 
-        List<Step> sample = takeSample(BATCH);
+        List<Step> sample = steps.takeSample(3 * BATCH / 4);
+        sample.addAll(finishSteps.takeSample(BATCH / 4));
         float[][] correctedPredictions = new float[BATCH][Action.values().length];
         for (int i = 0; i < BATCH; i++) {
             // SARSA formula
@@ -118,7 +114,7 @@ public class Dl4jActionStrategy implements ActionStrategy {
             // calculate max Q for next state, if we are not in the terminal state
             float maxQ = 0;
             // is terminal action
-            boolean isTerminalAction = steps.get(i).getNewState().isSolved();
+            boolean isTerminalAction = sample.get(i).getNewState().isSolved();
             if (!isTerminalAction) {
                 // predict possible future awards
                 float[] futureAwards = dl4j.runModel(model, sample.get(i).getNewState());

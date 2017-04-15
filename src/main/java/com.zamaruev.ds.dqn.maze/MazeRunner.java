@@ -26,7 +26,7 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 public class MazeRunner extends SwingWorker<Void, Integer> {
 
-    private final MazeGenerator generator = new MazeGenerator(5, 5, true);
+    private final MazeGenerator generator = new MazeGenerator(5, 5, false);
     private final ActionMaker actionMaker = new ActionMaker();
     private final ActionStrategy randomStrategy = new RandomActionStrategy();
     private final Dl4jActionStrategy dl4jStrategy = new Dl4jActionStrategy();
@@ -47,7 +47,7 @@ public class MazeRunner extends SwingWorker<Void, Integer> {
                 Thread.sleep(200);
             } else {
                 if (!frame.getRandom().getText().isEmpty()) {
-                    dl4jStrategy.setRandomThreshold(Double.valueOf(frame.getRandom().getText()));
+                    dl4jStrategy.setRandomThreshold(Double.valueOf(frame.getRandom().getText().replace(",", ".")));
                 }
                 solveMaze(generator.generate());
             }
@@ -61,7 +61,7 @@ public class MazeRunner extends SwingWorker<Void, Integer> {
         int best = optimalStrategy.calcSteps(maze);
         frame.getRandom().setText(String.format("%1.5f", dl4jStrategy.getRandomThreshold()));
         updateOutput(maze, steps, dl4jStrategy.getRandomThreshold());
-        while (!maze.isSolved() && steps < 1000) {
+        while (!maze.isSolved() && steps < 500) {
             frame.getRandom().setText(String.format("%1.5f", dl4jStrategy.getRandomThreshold()));
 
             updateOutput(maze, steps, dl4jStrategy.getRandomThreshold());

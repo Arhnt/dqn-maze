@@ -18,7 +18,7 @@ public class BackTrackActionStrategy implements ActionStrategy {
     /**
      * Score for dead action that does not change state (i.e. wall)
      */
-    private final static float DEAD_SCORE = -0.1f;
+    private final static float DEAD_SCORE = -0.5f;
     /**
      * Score for move action that does change state but does not solve the maze.
      */

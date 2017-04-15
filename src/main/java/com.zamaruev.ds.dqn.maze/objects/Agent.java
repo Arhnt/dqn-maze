@@ -6,15 +6,8 @@ import lombok.Data;
 @Data
 public class Agent extends AbstractTile {
 
-    private ActionStrategy actionStrategy;
-
     public Agent(int x, int y) {
         super(x, y);
-    }
-
-    public Agent(int x, int y, ActionStrategy strategy) {
-        super(x, y);
-        this.actionStrategy = strategy;
     }
 
     @Override
@@ -24,7 +17,7 @@ public class Agent extends AbstractTile {
 
     @Override
     public Agent clone() {
-        return new Agent(getX(), getY(), actionStrategy);
+        return new Agent(getX(), getY());
     }
 
 }
